@@ -21,7 +21,6 @@ htmlcov/
 .venv/
 venv/
 
-# VS Code / IDE
 .vscode/
 .idea/
 
