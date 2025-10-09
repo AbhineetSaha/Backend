@@ -9,7 +9,7 @@ Thumbs.db
 !.env.example
 
 # Python / Backend
-__pycache__/
+*/__pycache__/
 *.py[cod]
 *.pyo
 .pytest_cache/
