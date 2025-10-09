@@ -1,0 +1,11 @@
+fastapi>=0.118
+uvicorn[standard]>=0.37
+python-dotenv>=1.1.1
+supabase>=2.22
+PyJWT>=2.10
+pypdf>=6.1
+sentence-transformers>=5.1.1
+faiss-cpu>=1.12
+numpy>=2.3
+google-generativeai>=0.8
+python-multipart>=0.0.20
