@@ -44,6 +44,6 @@ app.include_router(conversation_router, prefix="/conversations", tags=["Conversa
 app.include_router(message_router, prefix="/conversations", tags=["Messages"])
 app.include_router(document_router, prefix="/conversations", tags=["Documents"])
 
-@app.get("/")
+@app.get("/health")
 def root():
     return {"status": "Backend running ✅"}
