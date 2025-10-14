@@ -5,7 +5,7 @@ from typing import Iterable, Optional, Set, List, Tuple
 from sentence_transformers import SentenceTransformer
 
 MODEL = SentenceTransformer("all-MiniLM-L6-v2")
-STORE_DIR = "db/vector_stores"
+STORE_DIR = os.getenv("VECTOR_STORE_DIR", "db/vector_stores")
 os.makedirs(STORE_DIR, exist_ok=True)
 
 # Stored payload: (index, [(text, doc_id)])

@@ -78,3 +78,15 @@ Deleting a conversation removes its documents (metadata + storage objects), FAIS
 - Run the frontend alongside this API (`npm run dev` in `frontend/`) to exercise the full flow.
 
 See the root `README.md` for overall project setup.
+
+## Deploying to Railway
+
+This repo ships with `railway.json` and `nixpacks.toml` so Railway can detect the Python service and run it with `uvicorn` automatically. To deploy:
+
+1. Install the Railway CLI and authenticate: `npm i -g @railway/cli && railway login`.
+2. From this `Backend/` directory, create or link a service: `railway init` (choose an existing project or create a new one).
+3. Push the code: `railway up`. Railway will use Nixpacks, install the dependencies in `requirements.txt`, and build a Python 3.11 image.
+4. Set the required environment variables (`GOOGLE_API_KEY`, `SUPABASE_URL`, `SUPABASE_KEY`, `SUPABASE_BUCKET`, `SUPABASE_JWT_SECRET`, optionally `CORS_ORIGINS`) via `railway variables set ...` or the Dashboard.
+5. (Optional but recommended) Attach a persistent volume and set `VECTOR_STORE_DIR=/data/vector_stores` so FAISS indexes survive restarts. Without this, indexes are stored on the ephemeral filesystem.
+
+After deploy, Railway exposes the API at the generated domain. The service responds to health checks on `/` and listens on the port that Railway injects through the `PORT` environment variable.
