@@ -7,7 +7,7 @@ This directory contains the Retrieval-Augmented Generation (RAG) API that powers
 - Supabase JWT validation and per-user enforcement
 - Conversation CRUD (with cascading deletes of messages, documents, and vector store files)
 - PDF ingestion, storage, and signed URL retrieval
-- SentenceTransformer embeddings persisted to FAISS (per conversation)
+- Gemini embeddings (default `models/text-embedding-004`) persisted to FAISS (per conversation)
 - Gemini-based answer generation constrained to retrieved snippets
 
 ## Requirements
@@ -43,7 +43,10 @@ Required variables:
 | `SUPABASE_BUCKET` | Supabase Storage bucket where PDFs are uploaded |
 | `SUPABASE_JWT_SECRET` | JWT secret used to validate Supabase auth tokens |
 
-Optional: adjust FAISS storage path in `services/vector_store.py`.
+Optional overrides:
+
+- Set `GOOGLE_EMBED_MODEL` to use a different Gemini embedding model/version.
+- Adjust FAISS storage path with `VECTOR_STORE_DIR` (defaults to `db/vector_stores`).
 
 ## Running the API
 
