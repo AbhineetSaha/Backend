@@ -8,7 +8,7 @@ router = APIRouter()
 
 @router.post("/{conversation_id}")
 async def query(conversation_id: str, body: dict, user_id: str = Depends(validate_user_token)):
-    """Query the uploaded documents with Gemini RAG"""
+    """Query the uploaded documents with the local QA pipeline."""
     question = body.get("query")
     store = VectorStore(conversation_id)
     retrieved_chunks = store.search(question, top_k=5)
