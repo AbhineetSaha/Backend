@@ -1,29 +1,21 @@
 import os
+from functools import lru_cache
 from typing import Iterable, List
 
-import google.generativeai as genai
 from dotenv import load_dotenv
+from sentence_transformers import SentenceTransformer
 
 load_dotenv()
-_API_KEY = os.getenv("GOOGLE_API_KEY")
-if not _API_KEY:
-    raise RuntimeError("GOOGLE_API_KEY must be set to request embeddings from Gemini.")
-genai.configure(api_key=_API_KEY)
 
-_EMBED_MODEL = os.getenv("GOOGLE_EMBED_MODEL", "models/text-embedding-004")
+_EMBED_MODEL = os.getenv(
+    "EMBEDDING_MODEL_NAME", "sentence-transformers/all-MiniLM-L6-v2"
+)
 
 
-def _embed_text(text: str) -> List[float]:
-    """Request a single embedding vector from Google Generative AI."""
-    response = genai.embed_content(
-        model=_EMBED_MODEL,
-        content=text,
-        task_type="retrieval_document",
-    )
-    embedding = response.get("embedding")
-    if embedding is None:
-        raise RuntimeError("Google Generative AI returned no embedding data.")
-    return embedding
+@lru_cache(maxsize=1)
+def _load_model() -> SentenceTransformer:
+    """Load and cache the sentence transformer used for embeddings."""
+    return SentenceTransformer(_EMBED_MODEL)
 
 
 def get_embeddings(texts: Iterable[str]) -> List[List[float]]:
@@ -31,4 +23,6 @@ def get_embeddings(texts: Iterable[str]) -> List[List[float]]:
     clean_texts = [text.strip() for text in texts if text and text.strip()]
     if not clean_texts:
         return []
-    return [_embed_text(text) for text in clean_texts]
+    model = _load_model()
+    vectors = model.encode(clean_texts, convert_to_numpy=True, show_progress_bar=False)
+    return [vector.astype("float32").tolist() for vector in vectors]
