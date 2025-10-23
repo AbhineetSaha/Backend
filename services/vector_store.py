@@ -1,8 +1,7 @@
 import os
 import pickle
-from typing import Iterable, List, Optional, Set, Tuple
+from typing import Iterable, List, Optional, Sequence, Set, Tuple
 
-import faiss
 import numpy as np
 
 from services.embedding_service import get_embeddings
@@ -27,15 +26,15 @@ class VectorStore:
     def __init__(self, conv_id: str):
         self.conv_id = conv_id
         self.path = os.path.join(STORE_DIR, f"{conv_id}.pkl")
-        self.index: Optional[faiss.IndexFlatL2] = None
+        self.vectors: Optional[np.ndarray] = None
         self.docs: List[Tuple[str, Optional[str]]] = []  # list of (text, doc_id)
         self._load()
 
     def _load(self):
         if os.path.exists(self.path):
             with open(self.path, "rb") as f:
-                index, docs = pickle.load(f)
-            self.index = index
+                vectors, docs = pickle.load(f)
+            self.vectors = vectors
             self.docs = [
                 entry if isinstance(entry, tuple) and len(entry) == 2 else (entry, None)
                 for entry in docs or []
@@ -43,7 +42,7 @@ class VectorStore:
 
     def _persist(self):
         with open(self.path, "wb") as f:
-            pickle.dump((self.index, self.docs), f)
+            pickle.dump((self.vectors, self.docs), f)
 
     def add(self, texts: Iterable[str], doc_id: str):
         texts = _clean_texts(texts)
@@ -52,9 +51,10 @@ class VectorStore:
         vectors = _embed(texts)
         if vectors.size == 0:
             return
-        if self.index is None:
-            self.index = faiss.IndexFlatL2(vectors.shape[1])
-        self.index.add(vectors)
+        if self.vectors is None:
+            self.vectors = vectors
+        else:
+            self.vectors = np.vstack([self.vectors, vectors])
         self.docs.extend([(text, doc_id) for text in texts])
         self._persist()
 
@@ -71,22 +71,19 @@ class VectorStore:
         if vectors.size == 0:
             self.delete_store()
             return
-        self.index = faiss.IndexFlatL2(vectors.shape[1])
-        self.index.add(vectors)
+        self.vectors = vectors
         self.docs = kept_entries
         self._persist()
 
     def search(self, query: str, top_k: int = 8, restrict_doc_ids: Optional[Set[str]] = None) -> List[str]:
-        if self.index is None or not self.docs:
+        if self.vectors is None or not self.docs:
             return []
         q_vec = _embed([query])
         if q_vec.size == 0:
             return []
-        _, I = self.index.search(q_vec, top_k * 3)  # overfetch
+        candidates = _top_k_cosine(self.vectors, q_vec[0], top_k * 3)
         results: List[str] = []
-        for idx in I[0]:
-            if idx < 0 or idx >= len(self.docs):
-                continue
+        for idx in candidates:
             text, d_id = self.docs[idx]
             if restrict_doc_ids is not None and (not d_id or d_id not in restrict_doc_ids):
                 continue
@@ -99,5 +96,17 @@ class VectorStore:
         """Remove the persisted vector store for this conversation."""
         if os.path.exists(self.path):
             os.remove(self.path)
-        self.index = None
+        self.vectors = None
         self.docs = []
+
+
+def _top_k_cosine(matrix: np.ndarray, query: np.ndarray, k: int) -> Sequence[int]:
+    if matrix.size == 0:
+        return []
+    k = max(k, 1)
+    matrix_norms = np.linalg.norm(matrix, axis=1, keepdims=True)
+    matrix_norm = matrix / np.maximum(matrix_norms, 1e-12)
+    query_norm = query / (np.linalg.norm(query) + 1e-12)
+    scores = matrix_norm @ query_norm
+    top_k_idx = np.argsort(-scores)[: min(k, matrix.shape[0])]
+    return top_k_idx.tolist()
